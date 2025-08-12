@@ -5,9 +5,9 @@ require("dotenv").config();
 const helmet = require("helmet");
 const mongoose = require("mongoose");
 mongoose.set("strictQuery", false);
-// const database = require("./config/database");
+const connectDB = require("./config/database");
 // const routes = require("./app/Http/routes");
-// const util = require("./app/util/customResponse");
+const util = require("./src/util/customResponse");
 
 const app = express();
 app.use(cors());
@@ -21,34 +21,19 @@ app.get('/', (req, res) => {
 // Helmet initialization
 app.use(helmet());
 
-// compress all responses
-// app.use(compression());
 
-// // MongoDB connection
-// mongoose.connect(database.mongodb.uri, {
-//   useNewUrlParser: true,
-//   /*  user: database.mongodb.username,
-//     pass: database.mongodb.password */
-// });
-// mongoose.Promise = global.Promise;
-// console.log("----------------------------------");
-
-// // On connection error
-// mongoose.connection.on("error", (error) => {
-//   console.log("Database error: " + error);
-// });
-
-// // On successful connection
-// mongoose.connection.on("connected", () => {
-//   console.log("Connected to mongo database");
-// });
-
-
-
+// MongoDB connection
+(async ()=> {
+    try {
+        await connectDB(process.env.MONGO_URI)
+    } catch (error) {
+        console.error("Failed to connect to mongo.", error)
+    }
+})();
 
 
 // Routes
-// app.use("/pro/v1/api", routes);
+// app.use("/amrutam/api", routes);
 
 // self start server after resoving uncaught exception.
 process.on("uncaughtException", function (err) {
