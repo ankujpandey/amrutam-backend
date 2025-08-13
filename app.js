@@ -34,15 +34,19 @@ mongoose.connect(process.env.MONGO_URI).then(()=>{
 
 
 // Routes
-app.use('/amrutam/api/auth', authRoutes);
-// app.use('/amrutam/api/doctors', doctorRoutes);
-// app.use('/amrutam/api/appointments', appointmentRoutes);
-// app.use('/amrutam/api/admin', adminRoutes);
+app.use('/amrutam/v1/api/auth', authRoutes);
+// app.use('/amrutam/v1/api/doctors', doctorRoutes);
+// app.use('/amrutam/v1/api/appointments', appointmentRoutes);
+// app.use('/amrutam/v1/api/admin', adminRoutes);
 
 // self start server after resoving uncaught exception.
 process.on("uncaughtException", function (err) {
   console.error(err);
   console.log("Node NOT Exiting...");
+});
+
+process.on("unhandledRejection", (reason, promise) => {
+  console.error("Unhandled Promise Rejection:", reason);
 });
 
 // start server
@@ -70,7 +74,7 @@ app.use((req, res, next) => {
 app.use((err, req, res, next) => {
   console.error(err);
   let status = err.status || 500;
-  let errMessage = err.message || 'Internal Server Error';
+  let errMessage = 'Internal Server Error';
   getCustomResponse(res, req, status, errMessage, false,"BAD_RESPONSE","",);
 });
 

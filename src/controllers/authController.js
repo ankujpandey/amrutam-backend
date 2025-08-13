@@ -6,7 +6,7 @@ const { generateToken } = require('../utils/jwt.util.js');
 const { getCustomResponse } = require('../utils/customResponse.js');
 
 
-module.exports.signup = async (req, res, next) => {
+exports.signup = async (req, res, next) => {
     try {
         const { name, email, password, phone } = req.body;
         
@@ -26,3 +26,4 @@ module.exports.signup = async (req, res, next) => {
         return getCustomResponse(res, req, 200, 'User Successfully Registered.', true, "", response, )
     } catch (err) { next(err); }
 };
+
