@@ -5,9 +5,12 @@ require("dotenv").config();
 const helmet = require("helmet");
 const mongoose = require("mongoose");
 mongoose.set("strictQuery", false);
-const connectDB = require("./config/database");
-// const routes = require("./app/Http/routes");
-const util = require("./src/util/customResponse");
+const { getCustomResponse } = require("./src/utils/customResponse");
+
+// fetch routes.
+const authRoutes = require('./src/routes/auth');
+// const doctorRoutes = require('./src/routes/doctors');
+// const appointmentRoutes = require('./src/routes/appointments');
 
 const app = express();
 app.use(cors());
@@ -21,19 +24,20 @@ app.get('/', (req, res) => {
 // Helmet initialization
 app.use(helmet());
 
-
 // MongoDB connection
-(async ()=> {
-    try {
-        await connectDB(process.env.MONGO_URI)
-    } catch (error) {
-        console.error("Failed to connect to mongo.", error)
-    }
-})();
+mongoose.connect(process.env.MONGO_URI).then(()=>{
+  console.log('MongoDB connected');
+}).catch(err=>{
+  console.error('Mongo connect error', err);
+  process.exit(1);
+});
 
 
 // Routes
-// app.use("/amrutam/api", routes);
+app.use('/amrutam/api/auth', authRoutes);
+// app.use('/amrutam/api/doctors', doctorRoutes);
+// app.use('/amrutam/api/appointments', appointmentRoutes);
+// app.use('/amrutam/api/admin', adminRoutes);
 
 // self start server after resoving uncaught exception.
 process.on("uncaughtException", function (err) {
@@ -41,12 +45,14 @@ process.on("uncaughtException", function (err) {
   console.log("Node NOT Exiting...");
 });
 
+// start server
 const server = app.listen(process.env.PORT, () => {
   const port = server.address().port;
   console.log("App is running on port", port);
 });
 
-app.get('/pro/v1/api/health', (req, res) => {
+// to check server health
+app.get('/health', (req, res) => {
   res.status(200).json({
     message: 'Working',
     success: true,
@@ -55,8 +61,17 @@ app.get('/pro/v1/api/health', (req, res) => {
   })
 });
 
+// page not found
 app.use((req, res, next) => {
-  util.getCustomResponse(res, req, 404, "Sorry Unable to find this page", false,"","Ok",);
+  getCustomResponse(res, req, 404, "Sorry Unable to find this page", false,"","Ok",);
+});
+
+// basic error handler
+app.use((err, req, res, next) => {
+  console.error(err);
+  let status = err.status || 500;
+  let errMessage = err.message || 'Internal Server Error';
+  getCustomResponse(res, req, status, errMessage, false,"BAD_RESPONSE","",);
 });
 
 
