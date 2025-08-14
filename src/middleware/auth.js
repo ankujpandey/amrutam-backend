@@ -10,8 +10,7 @@ exports.auth = async (req, res, next) => {
 
     const checkData = await customValidation.checkProperties({userId, authHeader, userRole});
     if (!checkData.status) {
-        getCustomResponse(res, req, 401, checkData.message, false, "MISSING_FIELDS");
-        return;
+        return getCustomResponse(res, req, 401, checkData.message, false, "MISSING_FIELDS");
     }
 
     const token = authHeader.split(' ')[1];
@@ -23,19 +22,24 @@ exports.auth = async (req, res, next) => {
             req.userRole = payload.role;
             next();
         }else{
-            getCustomResponse(res, req, 401, "Invalid Token", false, "INVALID_TOKEN");
-            return;
+            return getCustomResponse(res, req, 401, "Invalid Token", false, "INVALID_TOKEN");
         }
     } catch (err) {
-        if (err.name === 'TokenExpiredError') return getCustomResponse(res, req, 401, "Token expired", false, "INVALID_EXPIRED");
+        if (err.name === 'TokenExpiredError') {
+            return getCustomResponse(res, req, 401, "Token expired", false, "INVALID_EXPIRED");
+        }
         return getCustomResponse(res, req, 401, "Invalid Token", false, "INVALID_TOKEN");
     }
 };
 
-exports.requireRole = function (role) {
-    return (req, res, next) => {
-        if (!req.userRole) return getCustomResponse(res, req, 401, "Unauthorized", false, "USER_ROLL_MISSING");
-        if (req.userRole !== role) return getCustomResponse(res, req, 403, `${'Forbidden: requires ' + role}`, false, "USER_ROLL_MISSING");
-        next();
-    };
-}
+exports.requireRole = (role) => {
+  return (req, res, next) => {
+    if (!req.userRole) {
+      return getCustomResponse(res, req, 401, 'Unauthorized', false, 'USER_ROLE_MISSING');
+    }
+    if (req.userRole !== role) {
+      return getCustomResponse(res, req, 403, `Forbidden: requires ${role}`, false, 'ROLE_FORBIDDEN');
+    }
+    next();
+  };
+};

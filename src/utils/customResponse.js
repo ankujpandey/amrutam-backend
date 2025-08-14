@@ -14,13 +14,3 @@ exports.getCustomResponse = async function (res, req, code = "200", message = ""
     //Also we can save logs in db for api communication here. (if needed.)
     res.status(parseInt(code)).json(response);
 };
-
-exports.getGenericResponseObject = () => ({
-    statusCode: 200,
-    message: "",
-    status: "",
-    result: "",
-    type: "",
-    action_type: "",
-    error_key: ""
-});

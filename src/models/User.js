@@ -23,8 +23,8 @@ const UserSchema = new mongoose.Schema({
   phone: String,
   passwordHash: { type: String, required: true },
   role: { type: String, enum: ['patient','doctor','admin'], default: 'patient' },
-  availability: [AvailabilitySchema],
-  specialization: [{ type: String }],
+  availability: [AvailabilitySchema], // only for doctors
+  specialization: [{ type: String }], // only for doctors
   modes: [{ type: String, enum: ['online','in-person'] }],
   doctorApplication: { type: DoctorApplicationSchema, default: () => ({}) }
 }, { timestamps: true });
