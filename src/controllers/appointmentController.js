@@ -148,7 +148,7 @@ exports.unlockSlot = async (req, res) => {
   }
 };
 
-export const getAvailableSlots = async (req, res) => {
+exports.getAvailableSlots = async (req, res) => {
   try {
     const { doctorId, date } = req.query;
     if (!doctorId || !date) {

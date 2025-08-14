@@ -65,7 +65,7 @@ exports.signin = async (req, res) => {
   }
 };
 
-export const updateAvailability = async (req, res) => {
+exports.updateAvailability = async (req, res) => {
   try {
     const doctorId = req.userId;
     const { availability } = req.body;
