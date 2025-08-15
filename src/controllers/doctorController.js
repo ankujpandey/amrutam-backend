@@ -103,3 +103,28 @@ exports.slotsStatus = async (req, res) => {
     return getCustomResponse(res, req, 500, err.message, false, 'SERVER_ERROR');
   }
 };
+
+exports.searchDoctors = async (req, res, next) => {
+  try {
+    const { specialization, mode, sortBy } = req.query;
+
+    const filter = {};
+    if (specialization) filter.specialization = specialization;
+    if (mode) filter.modes = mode; // e.g. "online" or "in-person"
+
+    let doctors = await User.find({
+      role: 'doctor',
+      'doctorApplication.status': 'approved',
+      ...filter
+    }).lean();
+
+    // Sorting by soonest availability
+    if (sortBy === 'soonest') {
+      doctors.sort((a, b) => new Date(a.nextAvailableSlot) - new Date(b.nextAvailableSlot));
+    }
+
+    return getCustomResponse(res, req, 200, 'Doctors fetched successfully', true, '', doctors);
+  } catch (err) {
+    next(err);
+  }
+};

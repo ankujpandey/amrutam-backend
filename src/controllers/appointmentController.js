@@ -100,6 +100,15 @@ exports.cancelSlot = async (req, res) => {
       return getCustomResponse(res, req, 403, 'Not allowed to cancel this appointment', false, 'FORBIDDEN');
     }
 
+    // Combine date and start time to get appointment DateTime
+    const apptDateTime = new Date(`${appt.date}T${appt.start}:00Z`);
+    const now = new Date();
+    const hoursDiff = (apptDateTime - now) / (1000 * 60 * 60);
+    console.log({ apptDateTime, now, hoursDiff });
+    if (hoursDiff < 24) {
+      return getCustomResponse(res, req, 400, 'Cannot cancel within 24h', false, 'CANNOT_CANCEL');
+    }
+
     appt.status = 'cancelled';
     await appt.save();
     return getCustomResponse(res, req, 200, 'Appointment cancelled', true, '', appt);
@@ -200,6 +209,38 @@ exports.getAvailableSlots = async (req, res) => {
   } catch (err) {
     console.error(err);
     return getCustomResponse(res, req, 500, "Server error", false, "SERVER_ERROR");
+  }
+};
+
+exports.rescheduleAppointment  = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { newSlot } = req.body;
+
+    const appt = await Appointment.findById(id);
+    if (!appt) return getCustomResponse(res, req, 404, 'Appointment not found', false, 'NOT_FOUND');
+
+    // Only patient who booked or the doctor/admin can cancel – adjust as needed
+    const isPatient = String(appt.patientId) === String(req.userId);
+    // TODO: you may also check role via req.userRole === 'doctor'/'admin'
+    if (!isPatient) {
+      return getCustomResponse(res, req, 403, 'Not allowed to reschedule this appointment', false, 'FORBIDDEN');
+    }
+
+    // Combine date and start time to get appointment DateTime
+    const apptDateTime = new Date(`${appt.date}T${appt.start}:00Z`);
+    const now = new Date();
+    const hoursDiff = (apptDateTime - now) / (1000 * 60 * 60);
+    console.log({ apptDateTime, now, hoursDiff });
+    if (hoursDiff < 24) {
+      return getCustomResponse(res, req, 400, 'Cannot reschedule within 24h', false, 'CANNOT_CANCEL');
+    }
+// TODO: add start and end time of reschedule here in db.
+    appt.status = 'cancelled';
+    await appt.save();
+    return getCustomResponse(res, req, 200, 'Appointment cancelled', true, '', appt);
+  } catch (err) {
+    return getCustomResponse(res, req, 500, err.message, false, 'SERVER_ERROR');
   }
 };
 

@@ -9,8 +9,9 @@ const { getCustomResponse } = require("./src/utils/customResponse");
 
 // fetch routes.
 const authRoutes = require('./src/routes/auth');
-// const doctorRoutes = require('./src/routes/doctors');
-// const appointmentRoutes = require('./src/routes/appointments');
+const doctorRoutes = require('./src/routes/doctors');
+const appointmentRoutes = require('./src/routes/appointments');
+const adminRoutes = require('./src/routes/admin');
 
 const app = express();
 app.use(cors());
@@ -35,9 +36,9 @@ mongoose.connect(process.env.MONGO_URI).then(()=>{
 
 // Routes
 app.use('/amrutam/v1/api/auth', authRoutes);
-// app.use('/amrutam/v1/api/doctors', doctorRoutes);
-// app.use('/amrutam/v1/api/appointments', appointmentRoutes);
-// app.use('/amrutam/v1/api/admin', adminRoutes);
+app.use('/amrutam/v1/api/doctors', doctorRoutes);
+app.use('/amrutam/v1/api/appointments', appointmentRoutes);
+app.use('/amrutam/v1/api/admin', adminRoutes);
 
 // self start server after resoving uncaught exception.
 process.on("uncaughtException", function (err) {

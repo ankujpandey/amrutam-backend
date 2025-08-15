@@ -13,3 +13,12 @@ exports.updateAvailabilitySchema = Joi.object({
     slotDuration: Joi.number().min(5).max(180)
   })).min(1).required()
 });
+
+exports.searchDoctor = {
+  query: {
+    specialization: { type: 'string', optional: true },
+    mode: { type: 'enum', values: ['online', 'in-person'], optional: true },
+    sortBy: { type: 'enum', values: ['soonest'], optional: true }
+  }
+};
+
