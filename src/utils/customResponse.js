@@ -1,5 +1,5 @@
 exports.getCustomResponse = async function (res, req, code = "200", message = "", value = false, error_key = "", result = "", /* type = "", action_type = "",  responseId = "" */) {
-    if (code == 200 && value == true) {
+    if (code >= 200 && code < 300 && value == true) {
         value = true;
     } else {
         value = false;

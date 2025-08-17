@@ -8,7 +8,8 @@ const JWT_SECRET = process.env.JWT_SECRET || 'secret123';
 // Signup
 exports.signup = async (req, res) => {
   try {
-    const { name, email, password, phone, role } = req.body;
+    console.log("came to signup")
+    const { name, email, password, phone, role, bio="",specialization=[] } = req.body;
 
     const existing = await User.findOne({ email });
     if (existing) {
@@ -21,10 +22,12 @@ exports.signup = async (req, res) => {
       email,
       phone,
       passwordHash,
-      role: role && role === 'doctor' ? 'patient' : 'patient', // Always patient until approved
+      role: role && role === 'doctor' ? 'doctor' : 'patient',
       doctorApplication: role === 'doctor' ? {
         status: 'pending',
-        submittedAt: new Date()
+        submittedAt: new Date(),
+        bio,
+        specialization,
       } : { status: 'none' }
     });
 

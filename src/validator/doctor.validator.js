@@ -14,11 +14,9 @@ exports.updateAvailabilitySchema = Joi.object({
   })).min(1).required()
 });
 
-exports.searchDoctor = {
-  query: {
-    specialization: { type: 'string', optional: true },
-    mode: { type: 'enum', values: ['online', 'in-person'], optional: true },
-    sortBy: { type: 'enum', values: ['soonest'], optional: true }
-  }
-};
+exports.searchDoctor = Joi.object({
+  specialization: Joi.string().optional(),
+  mode: Joi.string().valid("online", "in-person").optional(),
+  sortBy: Joi.string().valid("soonest").optional()
+});
 

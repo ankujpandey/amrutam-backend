@@ -33,6 +33,10 @@ mongoose.connect(process.env.MONGO_URI).then(()=>{
   process.exit(1);
 });
 
+app.use((req, res, next) => {
+  console.log(req.url);
+  next();
+});
 
 // Routes
 app.use('/amrutam/v1/api/auth', authRoutes);

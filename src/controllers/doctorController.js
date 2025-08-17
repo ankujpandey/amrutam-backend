@@ -3,11 +3,15 @@ const Appointment = require('../models/Appointment');
 const redis = require('../utils/redisClient');
 const { getCustomResponse } = require('../utils/customResponse');
 
-exports.listDoctors = async (req, res) => {
+exports.findDoctor = async (req, res) => {
   try {
-    const doctors = await User.find({ role: 'doctor', 'doctorApplication.status': 'approved' })
-      .select('-passwordHash');
-    return getCustomResponse(res, req, 200, 'Doctors fetched successfully', true, '', doctors);
+    const { id } = req.params;
+    const doctor = await User.findOne({
+      _id: id,
+      role: 'doctor',
+      'doctorApplication.status': 'approved'
+    }).select('-passwordHash');
+    return getCustomResponse(res, req, 200, 'Doctor fetched successfully', true, '', doctor);
   } catch (err) {
     return getCustomResponse(res, req, 500, err.message, false, 'SERVER_ERROR');
   }

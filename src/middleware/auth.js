@@ -18,8 +18,8 @@ exports.auth = async (req, res, next) => {
         const payload = await verifyJwtToken(token);
         if(payload && payload.status){
             payload = payload.result;
-            userRole = payload.userId;
-            req.userRole = payload.role;
+            userId = payload.userId;
+            userRole = payload.role;
             next();
         }else{
             return getCustomResponse(res, req, 401, "Invalid Token", false, "INVALID_TOKEN");
