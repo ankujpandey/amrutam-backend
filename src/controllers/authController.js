@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const User = require('../models/User');
 const { getCustomResponse } = require('../utils/customResponse');
+const { generateToken } = require('../utils/jwt.util');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'secret123';
 
@@ -31,11 +32,11 @@ exports.signup = async (req, res) => {
       } : { status: 'none' }
     });
 
-    const token = jwt.sign({ userId: user._id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+    const token = generateToken({ userId: user._id.toString(), role: user.role });
 
     return getCustomResponse(res, req, 201, 'Signup successful', true, '', {
       token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role }
+      user: { id: user._id.toString(), name: user.name, email: user.email, role: user.role }
     });
   } catch (err) {
     return getCustomResponse(res, req, 500, err.message, false, 'SERVER_ERROR');
@@ -57,35 +58,14 @@ exports.signin = async (req, res) => {
       return getCustomResponse(res, req, 400, 'Invalid credentials', false, 'INVALID_CREDENTIALS');
     }
 
-    const token = jwt.sign({ userId: user._id, role: user.role }, JWT_SECRET, { expiresIn: '7d' });
+    const token = generateToken({ userId: user._id.toString(), role: user.role });
 
     return getCustomResponse(res, req, 200, 'Signin successful', true, '', {
       token,
-      user: { id: user._id, name: user.name, email: user.email, role: user.role }
+      user: { id: user._id.toString(), name: user.name, email: user.email, role: user.role, doctorApplication: user.doctorApplication.status }
     });
   } catch (err) {
     return getCustomResponse(res, req, 500, err.message, false, 'SERVER_ERROR');
   }
 };
 
-exports.updateAvailability = async (req, res) => {
-  try {
-    const doctorId = req.userId;
-    const { availability } = req.body;
-
-    if (!Array.isArray(availability) || availability.length === 0) {
-      return getCustomResponse(res, req, 400, "Invalid availability format", false, "INVALID_INPUT");
-    }
-
-    await User.findByIdAndUpdate(
-      doctorId,
-      { availability },
-      { new: true }
-    );
-
-    return getCustomResponse(res, req, 200, "Availability updated successfully", true, "", availability);
-  } catch (err) {
-    console.error(err);
-    return getCustomResponse(res, req, 500, "Server error", false, "SERVER_ERROR");
-  }
-};

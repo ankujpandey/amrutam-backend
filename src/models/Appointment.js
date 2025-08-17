@@ -20,7 +20,8 @@ const AppointmentSchema = new mongoose.Schema({
   date: { type: String, required: true }, // "YYYY-MM-DD"
   start: { type: String, required: true }, // "HH:mm"
   end: { type: String, required: true },   // "HH:mm"
-  status: { type: String, enum: ['locked','confirmed','cancelled'], default: 'locked' }
+  status: { type: String, enum: ['locked','confirmed','cancelled', 'completed'], default: 'locked' },
+  mode: { type: String, enum: ['online','in-person'], default: 'online' },
 }, { timestamps: true });
 
 // Prevent duplicate confirmed bookings for same slot

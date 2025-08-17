@@ -1,10 +1,11 @@
 const Appointment = require('../models/Appointment');
 const redis = require('../utils/redisClient');
 const { getCustomResponse } = require('../utils/customResponse');
+const User = require('../models/User');
 
 // key builder
-function lockKey(doctorId, date, start) {
-  return `lock:${doctorId}:${date}:${start}`;
+function lockKey(doctorId, date, start, mode) {
+  return `lock:${doctorId}:${date}:${start}:${mode}`;
 }
 
 /**
@@ -13,17 +14,18 @@ function lockKey(doctorId, date, start) {
  */
 exports.lockSlot = async (req, res) => {
   try {
-    const { doctorId, date, start, end } = req.body;
+    const userId = req.headers["x-user-id"];
+    const { doctorId, date, start, end, mode } = req.body;
 
-    const key = lockKey(doctorId, date, start);
+    const key = lockKey(doctorId, date, start, mode);
     // Try to acquire lock if not exists; expire in 300s (5 min)
-    const ok = await redis.set(key, String(req.userId), 'NX', 'EX', 300);
+    const ok = await redis.set(key, String(userId), 'NX', 'EX', 300);
     if (!ok) {
       return getCustomResponse(res, req, 400, 'Slot already locked', false, 'SLOT_LOCKED');
     }
 
     // (Optional) you could store end time too in a hash, but not required
-    await redis.hset(`${key}:meta`, { end, patientId: String(req.userId) });
+    await redis.hset(`${key}:meta`, { end, patientId: String(userId) });
     await redis.expire(`${key}:meta`, 300);
 
     getCustomResponse(res, req, 200, 'Slot locked (valid 5 min)', true, '', {
@@ -41,15 +43,16 @@ exports.lockSlot = async (req, res) => {
  */
 exports.confirmSlot = async (req, res) => {
   try {
-    const { doctorId, date, start, end } = req.body;
-    const key = lockKey(doctorId, date, start);
+    const { doctorId, date, start, end, mode } = req.body;
+    let userId = req.headers["x-user-id"];
+    const key = lockKey(doctorId, date, start, mode);
 
     // Check lock exists and belongs to this user
     const owner = await redis.get(key);
     if (!owner) {
       return getCustomResponse(res, req, 400, 'Lock missing or expired', false, 'LOCK_MISSING');
     }
-    if (owner !== String(req.userId)) {
+    if (owner !== String(userId)) {
       return getCustomResponse(res, req, 403, 'Lock owned by another user', false, 'LOCK_OWNED_BY_OTHER');
     }
 
@@ -57,10 +60,11 @@ exports.confirmSlot = async (req, res) => {
     try {
       const appt = await Appointment.create({
         doctorId,
-        patientId: req.userId,
+        patientId: userId,
         date,
         start,
         end,
+        mode,
         status: 'confirmed'
       });
 
@@ -89,12 +93,12 @@ exports.confirmSlot = async (req, res) => {
 exports.cancelSlot = async (req, res) => {
   try {
     const { id } = req.params;
-
+    const userId = req.headers["x-user-id"];
     const appt = await Appointment.findById(id);
     if (!appt) return getCustomResponse(res, req, 404, 'Appointment not found', false, 'NOT_FOUND');
 
     // Only patient who booked or the doctor/admin can cancel – adjust as needed
-    const isPatient = String(appt.patientId) === String(req.userId);
+    const isPatient = String(appt.patientId) === String(userId);
     // TODO: you may also check role via req.userRole === 'doctor'/'admin'
     if (!isPatient) {
       return getCustomResponse(res, req, 403, 'Not allowed to cancel this appointment', false, 'FORBIDDEN');
@@ -122,7 +126,8 @@ exports.cancelSlot = async (req, res) => {
  */
 exports.myAppointments = async (req, res) => {
   try {
-    const appts = await Appointment.find({ patientId: req.userId })
+    const userId = req.headers["x-user-id"];
+    const appts = await Appointment.find({ patientId: userId })
       .sort({ date: 1, start: 1 })
       .populate('doctorId', 'name email specialization');
     return getCustomResponse(res, req, 200, 'Appointments fetched', true, '', appts);
@@ -137,14 +142,15 @@ exports.myAppointments = async (req, res) => {
  */
 exports.unlockSlot = async (req, res) => {
   try {
-    const { doctorId, date, start } = req.body;
-    const key = lockKey(doctorId, date, start);
+    const userId = req.headers["x-user-id"];
+    const { doctorId, date, start, mode } = req.body;
+    const key = lockKey(doctorId, date, start, mode);
 
     const owner = await redis.get(key);
     if (!owner) {
       return getCustomResponse(res, req, 200, 'Already unlocked or expired', true, '', { unlocked: true });
     }
-    if (owner !== String(req.userId)) {
+    if (owner !== String(userId)) {
       return getCustomResponse(res, req, 403, 'Lock owned by another user', false, 'LOCK_OWNED_BY_OTHER');
     }
 
@@ -160,6 +166,8 @@ exports.unlockSlot = async (req, res) => {
 exports.getAvailableSlots = async (req, res) => {
   try {
     const { doctorId, date } = req.query;
+
+    // Validate inputs
     if (!doctorId || !date) {
       return getCustomResponse(res, req, 400, "doctorId and date are required", false, "MISSING_FIELDS");
     }
@@ -183,7 +191,7 @@ exports.getAvailableSlots = async (req, res) => {
     const bookedTimes = bookedSlots.map(b => `${b.start}-${b.end}`);
 
     // Get locked slots from Redis
-    const redisKeys = await redisClient.keys(`lock:${doctorId}:${date}:*`);
+    const redisKeys = await redis.keys(`lock:${doctorId}:${date}:*`);
     const lockedTimes = redisKeys.map(key => key.split(":").slice(-2).join("-"));
 
     // Generate all possible slots
@@ -214,6 +222,7 @@ exports.getAvailableSlots = async (req, res) => {
 
 exports.rescheduleAppointment  = async (req, res) => {
   try {
+    const userId = req.headers["x-user-id"];
     const { id } = req.params;
     const { newSlot } = req.body;
 
@@ -221,7 +230,7 @@ exports.rescheduleAppointment  = async (req, res) => {
     if (!appt) return getCustomResponse(res, req, 404, 'Appointment not found', false, 'NOT_FOUND');
 
     // Only patient who booked or the doctor/admin can cancel – adjust as needed
-    const isPatient = String(appt.patientId) === String(req.userId);
+    const isPatient = String(appt.patientId) === String(userId);
     // TODO: you may also check role via req.userRole === 'doctor'/'admin'
     if (!isPatient) {
       return getCustomResponse(res, req, 403, 'Not allowed to reschedule this appointment', false, 'FORBIDDEN');
@@ -231,7 +240,6 @@ exports.rescheduleAppointment  = async (req, res) => {
     const apptDateTime = new Date(`${appt.date}T${appt.start}:00Z`);
     const now = new Date();
     const hoursDiff = (apptDateTime - now) / (1000 * 60 * 60);
-    console.log({ apptDateTime, now, hoursDiff });
     if (hoursDiff < 24) {
       return getCustomResponse(res, req, 400, 'Cannot reschedule within 24h', false, 'CANNOT_CANCEL');
     }

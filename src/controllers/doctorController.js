@@ -11,6 +11,8 @@ exports.findDoctor = async (req, res) => {
       role: 'doctor',
       'doctorApplication.status': 'approved'
     }).select('-passwordHash');
+
+    console.log(doctor.availability, "Doctor's availability");
     return getCustomResponse(res, req, 200, 'Doctor fetched successfully', true, '', doctor);
   } catch (err) {
     return getCustomResponse(res, req, 500, err.message, false, 'SERVER_ERROR');
@@ -42,15 +44,23 @@ exports.applyDoctor = async (req, res) => {
 
 exports.updateAvailability = async (req, res) => {
   try {
+    const doctorId = req.userId;
     const { availability } = req.body;
-    const user = await User.findById(req.userId);
-    if (!user) return getCustomResponse(res, req, 404, 'User not found', false, 'USER_NOT_FOUND');
 
-    user.availability = availability;
-    await user.save();
-    return getCustomResponse(res, req, 200, 'Availability updated', true, '', user.availability);
+    if (!Array.isArray(availability) || availability.length === 0) {
+      return getCustomResponse(res, req, 400, "Invalid availability format", false, "INVALID_INPUT");
+    }
+
+    await User.findByIdAndUpdate(
+      doctorId,
+      { availability },
+      { new: true }
+    );
+
+    return getCustomResponse(res, req, 200, "Availability updated successfully", true, "", availability);
   } catch (err) {
-    return getCustomResponse(res, req, 500, err.message, false, 'SERVER_ERROR');
+    console.error(err);
+    return getCustomResponse(res, req, 500, "Server error", false, "SERVER_ERROR");
   }
 };
 
@@ -63,47 +73,30 @@ exports.updateAvailability = async (req, res) => {
  */
 exports.slotsStatus = async (req, res) => {
   try {
-    const { date } = req.query; // YYYY-MM-DD
-    const doctorId = req.userId; // doctor authenticated
+    const { date } = req.query;
+    const doctorId = req.headers["x-user-id"];
+
+    console.log("Fetching confirmed appointments for doctor:", doctorId, "on date:", date);
 
     if (!date) {
       return getCustomResponse(res, req, 400, 'date is required (YYYY-MM-DD)', false, 'MISSING_DATE');
     }
 
-    // 1) Redis locks for this doctor + date
-    const pattern = `lock:${doctorId}:${date}:*`;
-    const locks = [];
-    let cursor = '0';
-    do {
-      const reply = await redis.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
-      cursor = reply[0];
-      const keys = reply[1];
-      if (keys && keys.length) {
-        for (const key of keys) {
-          const ttl = await redis.ttl(key);
-          const meta = await redis.hgetall(`${key}:meta`);
-          const parts = key.split(':'); // ['lock', doctorId, date, start]
-          const start = parts[3];
-          locks.push({
-            start,
-            end: meta.end || null,
-            patientId: meta.patientId || null,
-            ttl
-          });
-        }
-      }
-    } while (cursor !== '0');
+    const appointments = await Appointment.find({ 
+      doctorId, 
+      date, 
+      status: "confirmed" 
+    })
+      .sort({ start: 1 })
+      .populate("patientId", "name email phone");
 
-    // 2) Mongo confirmed/cancelled appointments for that date
-    const appointments = await Appointment.find({ doctorId, date })
-      .sort({ start: 1 });
-
-    return getCustomResponse(res, req, 200, 'Slots status', true, '', {
+    return getCustomResponse(res, req, 200, 'Confirmed appointments with patient details', true, '', {
       date,
-      redisLocks: locks,
       appointments
     });
+
   } catch (err) {
+    console.error("Error fetching appointments:", err);
     return getCustomResponse(res, req, 500, err.message, false, 'SERVER_ERROR');
   }
 };

@@ -7,7 +7,8 @@ exports.verifyJwtToken = (token) => {
                 return resolve({
                     statusCode: 401,
                     message: err.message,
-                    status: false
+                    status: false,
+                    err: err
                 });
             }
             resolve({
@@ -20,6 +21,7 @@ exports.verifyJwtToken = (token) => {
     });
 };
 
-exports.generateToken = (userData, time = "3600s") => {
+exports.generateToken = (userData, time = "3600s") => {-
+    console.log("userData", userData);
     return jwt.sign(userData, process.env.TOKEN_SECRET, { expiresIn: time });
 };
