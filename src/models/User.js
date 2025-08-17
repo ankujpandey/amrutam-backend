@@ -1,5 +1,12 @@
 const mongoose = require('mongoose');
 
+const RecurringRuleSchema = new mongoose.Schema({
+  name: { type: String, required: true },              // e.g., "Regular Schedule"
+  startDate: { type: String, required: true },         // "2024-01-01"
+  endDate: { type: String, required: true },           // "2024-12-31"
+  repeatWeekly: { type: Boolean, default: true }
+}, { _id: true });
+
 const AvailabilitySchema = new mongoose.Schema({
   day: { type: String, enum: ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'], required: true },
   start: { type: String, required: true }, // "09:00"
@@ -24,6 +31,7 @@ const UserSchema = new mongoose.Schema({
   passwordHash: { type: String, required: true },
   role: { type: String, enum: ['patient','doctor','admin'], default: 'patient' },
   availability: [AvailabilitySchema], // only for doctors
+  recurringRules: [RecurringRuleSchema],
   specialization: [{ type: String }], // only for doctors
   modes: [{ type: String, enum: ['online','in-person'] }],
   doctorApplication: { type: DoctorApplicationSchema, default: () => ({}) }

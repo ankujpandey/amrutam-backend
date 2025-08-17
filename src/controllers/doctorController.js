@@ -22,7 +22,7 @@ exports.findDoctor = async (req, res) => {
 exports.applyDoctor = async (req, res) => {
   try {
     const { specialization, bio } = req.body;
-    const user = await User.findById(req.userId);
+    const user = await User.findById( req.headers["x-user-id"]);
     if (!user) return getCustomResponse(res, req, 404, 'User not found', false, 'USER_NOT_FOUND');
 
     if (user.doctorApplication.status === 'pending')
@@ -44,7 +44,7 @@ exports.applyDoctor = async (req, res) => {
 
 exports.updateAvailability = async (req, res) => {
   try {
-    const doctorId = req.userId;
+    const doctorId =  req.headers["x-user-id"];
     const { availability } = req.body;
 
     if (!Array.isArray(availability) || availability.length === 0) {
@@ -53,7 +53,7 @@ exports.updateAvailability = async (req, res) => {
 
     await User.findByIdAndUpdate(
       doctorId,
-      { availability },
+       { availability, recurringRules },
       { new: true }
     );
 
@@ -123,5 +123,21 @@ exports.searchDoctors = async (req, res, next) => {
     return getCustomResponse(res, req, 200, 'Doctors fetched successfully', true, '', doctors);
   } catch (err) {
     next(err);
+  }
+};
+
+exports.getAvailability = async (req, res) => {
+  try {
+    const doctorId = req.params.id;
+
+    const doctor = await User.findById(doctorId).select("availability");
+    if (!doctor) {
+      return getCustomResponse(res, req, 404, "Doctor not found", false, "DOCTOR_NOT_FOUND");
+    }
+
+    return getCustomResponse(res, req, 200, "Availability fetched successfully", true, '', doctor.availability || []);
+  } catch (err) {
+    console.error(err);
+    return getCustomResponse(res, req, 500, "Server error", false, "SERVER_ERROR");
   }
 };
