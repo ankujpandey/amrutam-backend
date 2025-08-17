@@ -1,8 +1,7 @@
 const IORedis = require("ioredis");
-const host = process.env.REDIS_HOST;
-const port = Number(process.env.REDIS_PORT);
+const url = process.env.REDIS_URL;
 
-let redis = new IORedis(port, host);
+let redis = new IORedis(url);
 
 redis.on("error", e => console.error("Redis error:", e));
 redis.on("connect", () => console.log("Redis connected"));

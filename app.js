@@ -6,6 +6,9 @@ const helmet = require("helmet");
 const mongoose = require("mongoose");
 mongoose.set("strictQuery", false);
 const { getCustomResponse } = require("./src/utils/customResponse");
+const swaggerDocument = require("./swagger.json");
+app.use("/api-docs", swaggerUi.serve, swaggerUi.setup(swaggerDocument));
+
 
 // fetch routes.
 const authRoutes = require('./src/routes/auth');

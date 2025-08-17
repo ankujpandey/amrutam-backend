@@ -1,0 +1,410 @@
+{
+  "openapi": "3.0.0",
+  "info": {
+    "title": "Amrutam Backend API",
+    "version": "1.0.0",
+    "description": "API documentation for Amrutam project"
+  },
+  "servers": [
+    {
+      "url": "http://localhost:5000/amrutam/v1/api"
+    }
+  ],
+  "paths": {
+    "/auth/signin": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "User Login",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "email": { "type": "string", "example": "user@example.com" },
+                  "password": { "type": "string", "example": "secret123" }
+                },
+                "required": ["email", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Login successful, returns JWT token" },
+          "400": { "description": "Invalid credentials" },
+          "500": { "description": "Internal server error" }
+        }
+      }
+    },
+    "/auth/signup": {
+      "post": {
+        "tags": ["Auth"],
+        "summary": "User Registration",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "name": { "type": "string", "example": "John Doe" },
+                  "email": { "type": "string", "example": "john@example.com" },
+                  "password": { "type": "string", "example": "mypassword" }
+                },
+                "required": ["name", "email", "password"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "User registered successfully" },
+          "400": { "description": "Validation error" },
+          "500": { "description": "Internal server error" }
+        }
+      }
+    },
+    "/doctors/doctor/{id}": {
+      "get": {
+        "tags": ["Doctors"],
+        "summary": "Get doctor details by ID",
+        "description": "Fetch details of a specific doctor (accessible to patients only)",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Doctor ID"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Doctor details" },
+          "403": { "description": "Forbidden, only patients can access" },
+          "404": { "description": "Doctor not found" }
+        }
+      }
+    },
+    "/doctors/search": {
+      "get": {
+        "tags": ["Doctors"],
+        "summary": "Search doctors",
+        "description": "Search doctors using filters like specialization, location, etc.",
+        "parameters": [
+          {
+            "name": "name",
+            "in": "query",
+            "schema": { "type": "string" },
+            "description": "Doctor name to search"
+          },
+          {
+            "name": "specialization",
+            "in": "query",
+            "schema": { "type": "string" },
+            "description": "Specialization filter"
+          },
+          {
+            "name": "location",
+            "in": "query",
+            "schema": { "type": "string" },
+            "description": "Location filter"
+          }
+        ],
+        "responses": {
+          "200": { "description": "List of matching doctors" },
+          "400": { "description": "Invalid search parameters" }
+        }
+      }
+    },
+    "/doctors/update-availability": {
+      "patch": {
+        "tags": ["Doctors"],
+        "summary": "Update doctor availability",
+        "description": "Doctors can update their availability status",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "available": { "type": "boolean", "example": true },
+                  "timeSlots": {
+                    "type": "array",
+                    "items": { "type": "string", "example": "10:00-11:00" }
+                  }
+                },
+                "required": ["available"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Availability updated successfully" },
+          "403": { "description": "Forbidden, only doctors can access" },
+          "400": { "description": "Validation error" }
+        }
+      }
+    },
+    "/doctors/slots": {
+      "get": {
+        "tags": ["Doctors"],
+        "summary": "Get doctor slots status",
+        "description": "Returns the current status of the doctor's available slots",
+        "responses": {
+          "200": { "description": "Doctor slot status" },
+          "403": { "description": "Forbidden, only doctors can access" }
+        }
+      }
+    },
+    "/doctors/{id}/availability": {
+      "get": {
+        "tags": ["Doctors"],
+        "summary": "Get doctor availability",
+        "description": "Fetch availability details of a specific doctor by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Doctor ID"
+          }
+        ],
+        "responses": {
+          "200": { "description": "Doctor availability retrieved successfully" },
+          "403": { "description": "Forbidden, only authenticated users can access" },
+          "404": { "description": "Doctor not found" }
+        }
+      }
+    },
+    "/appointments/lock": {
+      "post": {
+        "tags": ["Appointments"],
+        "summary": "Lock a slot",
+        "description": "Temporarily lock a doctor slot before confirming",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "doctorId": { "type": "string", "example": "64f12bc9a9c..." },
+                  "slotTime": { "type": "string", "example": "2025-08-20T10:00:00Z" }
+                },
+                "required": ["doctorId", "slotTime"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Slot locked successfully" },
+          "400": { "description": "Validation error" }
+        }
+      }
+    },
+    "/appointments/confirm": {
+      "post": {
+        "tags": ["Appointments"],
+        "summary": "Confirm appointment",
+        "description": "Confirm a locked slot (patients only)",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "slotId": { "type": "string", "example": "abc123" },
+                  "paymentId": { "type": "string", "example": "pay_456" }
+                },
+                "required": ["slotId", "paymentId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "201": { "description": "Appointment confirmed successfully" },
+          "400": { "description": "Validation error" }
+        }
+      }
+    },
+    "/appointments/{id}/cancel": {
+      "patch": {
+        "tags": ["Appointments"],
+        "summary": "Cancel appointment",
+        "description": "Cancel an appointment by ID",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Appointment ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "reason": { "type": "string", "example": "Not available" }
+                },
+                "required": ["reason"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Appointment cancelled successfully" },
+          "404": { "description": "Appointment not found" }
+        }
+      }
+    },
+    "/appointments/my": {
+      "get": {
+        "tags": ["Appointments"],
+        "summary": "My Appointments",
+        "description": "Fetch all appointments of the logged-in patient",
+        "responses": {
+          "200": { "description": "List of patient appointments" }
+        }
+      }
+    },
+    "/appointments/unlock": {
+      "post": {
+        "tags": ["Appointments"],
+        "summary": "Unlock slot",
+        "description": "Unlock a previously locked slot",
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "slotId": { "type": "string", "example": "abc123" }
+                },
+                "required": ["slotId"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Slot unlocked successfully" }
+        }
+      }
+    },
+    "/appointments/available-slots": {
+      "get": {
+        "tags": ["Appointments"],
+        "summary": "Available slots",
+        "description": "Get all available doctor slots",
+        "parameters": [
+          {
+            "name": "doctorId",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Doctor ID"
+          },
+          {
+            "name": "date",
+            "in": "query",
+            "required": true,
+            "schema": { "type": "string", "format": "date" },
+            "description": "Date for available slots"
+          }
+        ],
+        "responses": {
+          "200": { "description": "List of available slots" }
+        }
+      }
+    },
+    "/appointments/{id}/reschedule": {
+      "put": {
+        "tags": ["Appointments"],
+        "summary": "Reschedule appointment",
+        "description": "Reschedule an existing appointment",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "Appointment ID"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "newDate": { "type": "string", "format": "date-time", "example": "2025-08-25T15:00:00Z" }
+                },
+                "required": ["newDate"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Appointment rescheduled successfully" },
+          "404": { "description": "Appointment not found" }
+        }
+      }
+    },
+    "/admin/applications": {
+      "get": {
+        "tags": ["Admin"],
+        "summary": "List doctor applications",
+        "description": "Fetch all doctor applications (admin only)",
+        "responses": {
+          "200": { "description": "List of doctor applications" },
+          "403": { "description": "Forbidden, only admins can access" }
+        }
+      }
+    },
+    "/admin/applications/{userId}/review": {
+      "patch": {
+        "tags": ["Admin"],
+        "summary": "Review doctor application",
+        "description": "Approve or reject a doctor's application (admin only)",
+        "parameters": [
+          {
+            "name": "userId",
+            "in": "path",
+            "required": true,
+            "schema": { "type": "string" },
+            "description": "User ID of the applicant"
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "status": { "type": "string", "enum": ["approved", "rejected"], "example": "approved" },
+                  "remarks": { "type": "string", "example": "Application looks good" }
+                },
+                "required": ["status"]
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": { "description": "Application reviewed successfully" },
+          "400": { "description": "Validation error" },
+          "403": { "description": "Forbidden, only admins can access" },
+          "404": { "description": "User application not found" }
+        }
+      }
+    }
+  }
+}
